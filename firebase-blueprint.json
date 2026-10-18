@@ -1,0 +1,208 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Enrolled student at EL SHADDAÏ KOM ABUNDANT LIFE secondary school",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "System-generated student ID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full student name",
+          "maxLength": 100
+        },
+        "level": {
+          "type": "string",
+          "description": "Grade level (Form 1–5, Lower Sixth, Upper Sixth)",
+          "maxLength": 30
+        },
+        "subjects": {
+          "type": "array",
+          "description": "Enrolled extra classes subjects"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Parent or student contact phone number",
+          "maxLength": 30
+        },
+        "termly_fee": {
+          "type": "number",
+          "description": "Termly fee in CFA francs (XAF)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when student was registered"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": ["id", "name", "level", "termly_fee"]
+    },
+    "Session": {
+      "title": "Session",
+      "description": "Extra classes tutoring session",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "System-generated session ID"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the session in YYYY-MM-DD",
+          "maxLength": 20
+        },
+        "level": {
+          "type": "string",
+          "description": "Target level for attendance eligibility",
+          "maxLength": 30
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject taught in this session",
+          "maxLength": 60
+        },
+        "teacher": {
+          "type": "string",
+          "description": "Name or identifier of the teacher",
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when session was created"
+        }
+      },
+      "required": ["id", "date", "level", "subject"]
+    },
+    "AttendanceMark": {
+      "title": "AttendanceMark",
+      "description": "Attendance mark for a student in a session",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Composite key {sessionId}_{studentId}"
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "Foreign key to session document"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Foreign key to student document"
+        },
+        "present": {
+          "type": "boolean",
+          "description": "True if present, false if absent"
+        },
+        "markedAt": {
+          "type": "string",
+          "description": "Timestamp when attendance was recorded"
+        },
+        "markedBy": {
+          "type": "string",
+          "description": "Staff email or name who marked attendance"
+        }
+      },
+      "required": ["id", "sessionId", "studentId", "present"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Payment record against a student fee balance",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "System-generated payment ID"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Foreign key to student document"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount in CFA francs (XAF). Positive for payment, negative for refund."
+        },
+        "term": {
+          "type": "string",
+          "description": "Academic term (Term 1, Term 2, Term 3)",
+          "maxLength": 20
+        },
+        "date": {
+          "type": "string",
+          "description": "Payment date YYYY-MM-DD",
+          "maxLength": 20
+        },
+        "note": {
+          "type": "string",
+          "description": "Payment note or receipt reference",
+          "maxLength": 200
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when payment was recorded"
+        },
+        "recordedBy": {
+          "type": "string",
+          "description": "Staff member who recorded payment"
+        }
+      },
+      "required": ["id", "studentId", "amount", "term", "date"]
+    },
+    "Staff": {
+      "title": "Staff",
+      "description": "Authorized staff profile at EL SHADDAÏ KOM ABUNDANT LIFE",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Staff UID or ID"
+        },
+        "email": {
+          "type": "string",
+          "description": "Staff email address"
+        },
+        "name": {
+          "type": "string",
+          "description": "Staff full name"
+        },
+        "role": {
+          "type": "string",
+          "description": "Staff role (admin or teacher)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Registration timestamp"
+        }
+      },
+      "required": ["id", "email"]
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Student roster documents"
+    },
+    "/sessions/{sessionId}": {
+      "schema": "Session",
+      "description": "Tutoring sessions documents"
+    },
+    "/attendance/{attendanceId}": {
+      "schema": "AttendanceMark",
+      "description": "Attendance marks keyed by {sessionId}_{studentId}"
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Student fee payment records"
+    },
+    "/staff/{staffId}": {
+      "schema": "Staff",
+      "description": "Staff registry documents"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Extra Classes Register",
+  "description": "Extra classes tutoring register: student roster, QR badge scanning, live attendance, and termly fee balance tracking for THE BEST ACADEMY.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

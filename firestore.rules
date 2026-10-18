@@ -1,0 +1,132 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 260;
+    }
+
+    // Authorized staff verification:
+    // Signed-in educator whose account has not been revoked
+    function isStaff() {
+      return isSignedIn() && (
+        request.auth.token.email == 'labundant012@gmail.com' ||
+        !exists(/databases/$(database)/documents/staff/$(request.auth.uid)) ||
+        !('status' in get(/databases/$(database)/documents/staff/$(request.auth.uid)).data) ||
+        get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.status != 'revoked'
+      );
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'labundant012@gmail.com' ||
+        (
+          exists(/databases/$(database)/documents/staff/$(request.auth.uid)) &&
+          ('role' in get(/databases/$(database)/documents/staff/$(request.auth.uid)).data) &&
+          get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role == 'admin' &&
+          (!('status' in get(/databases/$(database)/documents/staff/$(request.auth.uid)).data) ||
+           get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.status != 'revoked')
+        )
+      );
+    }
+
+    // Strict input validation boundaries
+    function isValidLevel(level) {
+      return level in ['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Lower Sixth', 'Upper Sixth'];
+    }
+
+    function isValidDate(d) {
+      return d is string && d.size() == 10 && d.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function isValidStudent(data) {
+      return ('id' in data) && data.id is string && data.id.size() <= 128 &&
+             ('name' in data) && data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+             ('level' in data) && isValidLevel(data.level) &&
+             (
+               (('termly_fee' in data) && data.termly_fee is number && data.termly_fee >= 0) ||
+               (('termlyFee' in data) && data.termlyFee is number && data.termlyFee >= 0)
+             );
+    }
+
+    function isValidSession(data) {
+      return ('id' in data) && data.id is string && data.id.size() <= 128 &&
+             ('date' in data) && isValidDate(data.date) &&
+             ('level' in data) && isValidLevel(data.level) &&
+             ('subject' in data) && data.subject is string && data.subject.size() > 0 && data.subject.size() <= 100;
+    }
+
+    function isValidAttendance(data) {
+      return ('id' in data) && data.id is string && data.id.size() <= 260 &&
+             ('sessionId' in data) && data.sessionId is string && data.sessionId.size() <= 128 &&
+             ('studentId' in data) && data.studentId is string && data.studentId.size() <= 128 &&
+             ('present' in data) && data.present is bool;
+    }
+
+    function isValidPayment(data) {
+      return ('id' in data) && data.id is string && data.id.size() <= 128 &&
+             ('studentId' in data) && data.studentId is string && data.studentId.size() <= 128 &&
+             ('amount' in data) && data.amount is number && data.amount != 0 &&
+             ('date' in data) && isValidDate(data.date);
+    }
+
+    function isValidStaffDoc(data) {
+      return ('id' in data) && data.id is string && data.id.size() <= 128 &&
+             ('email' in data) && data.email is string &&
+             (!('role' in data) || data.role in ['admin', 'teacher']);
+    }
+
+    // Default catch-all denies all unauthenticated or unauthorized access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Students collection: accessible to authorized staff
+    match /students/{studentId} {
+      allow read: if isStaff();
+      allow create: if isStaff() && isValidId(studentId) && isValidStudent(incoming());
+      allow update: if isStaff() && isValidId(studentId);
+      allow delete: if isStaff() && isValidId(studentId);
+    }
+
+    // Sessions collection
+    match /sessions/{sessionId} {
+      allow read: if isStaff();
+      allow create: if isStaff() && isValidId(sessionId) && isValidSession(incoming());
+      allow update: if isStaff() && isValidId(sessionId);
+      allow delete: if isStaff() && isValidId(sessionId);
+    }
+
+    // Attendance marks collection
+    match /attendance/{attendanceId} {
+      allow read: if isStaff();
+      allow create: if isStaff() && isValidId(attendanceId) && isValidAttendance(incoming());
+      allow update: if isStaff() && isValidId(attendanceId);
+      allow delete: if isStaff() && isValidId(attendanceId);
+    }
+
+    // Payments collection: append-only ledger
+    match /payments/{paymentId} {
+      allow read: if isStaff();
+      allow create: if isStaff() && isValidId(paymentId) && isValidPayment(incoming());
+      allow update: if isAdmin();
+      allow delete: if isStaff() && isValidId(paymentId);
+    }
+
+    // Staff registry collection
+    match /staff/{staffId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (staffId == request.auth.uid || isAdmin()) && isValidStaffDoc(incoming());
+      allow update: if isSignedIn() && (staffId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+  }
+}
